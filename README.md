@@ -284,7 +284,7 @@ npm run seed:vet                           # optional sample vets
 ## Not done yet (next steps)
 
 - Real values for the placeholders from Step 7: warehouse address, shipping prices, **GST rates** (with your CA), and your own product photos and descriptions.
-- Vet appointments: the backend and the Admin screen are built (Step 7b). Still to do: the booking page on the website, the booking screen in the mobile app, and email or SMS confirmations.
+- Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
 - Not built yet: Mates / breeder verification, insurance referrals, subscriptions. These become custom Medusa modules in the same way as the vet module.
 - Razorpay payments, image storage (Cloudflare R2) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.
