@@ -24,7 +24,9 @@
     "db:migrate": "medusa db:migrate",
     "create-admin": "medusa user",
     "seed:petzy": "medusa exec ./src/scripts/seed-petzy.ts",
-    "seed:vet": "medusa exec ./src/scripts/seed-vet.ts"
+    "seed:vet": "medusa exec ./src/scripts/seed-vet.ts",
+    "seed:mates": "medusa exec ./src/scripts/seed-mates.ts",
+    "expire:mates": "medusa exec ./src/scripts/expire-mates-listings.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.21.2",
@@ -37,6 +39,7 @@
     "@medusajs/medusa": "2.21.2",
     "@medusajs/ui": "4.2.6",
     "@tanstack/react-query": "5.64.2",
+    "multer": "^2.4.0",
     "react-i18next": "13.5.0",
     "react-router-dom": "7.18.2",
     "zod": "4.2.0"
@@ -46,6 +49,7 @@
     "@swc/core": "^1.7.28",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.13",
+    "@types/multer": "^2.3.0",
     "@types/node": "^20.12.11",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.2.25",

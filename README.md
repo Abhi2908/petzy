@@ -183,7 +183,65 @@ GET  /store/vet/providers/:id/slots?date=YYYY-MM-DD   open slots for that day (I
 POST /store/vet/appointments                       book a slot (guests allowed, pay at the clinic)
 ```
 
-The booking pages on the website and in the mobile app are not built yet; they will call these endpoints.
+The website booking page is at http://localhost:8000/in/vet ("Vet" in the menu). The mobile app screen is not built yet; it will call the same endpoints.
+
+### Step 7c – Mates marketplace (new tables and sample listings)
+
+Mates is the pet marketplace: customers post listings (like OLX) and buyers negotiate with offers. It adds four tables. Create them, then restart the backend:
+
+```bash
+cd backend/apps/backend
+npx medusa db:migrate        # creates mates_listing, mates_offer, mates_message, mates_report
+# restart the backend (Ctrl+C, then npm run dev), and in a second terminal:
+npm run seed:mates           # optional: 5 SAMPLE listings, already approved (safe to re-run)
+```
+
+Then open Admin at http://localhost:9000/app and click **Mates** in the left menu:
+
+- **Listings tab:** new and edited listings wait here as "Waiting for review". Click one to see everything (photos, seller phone, offers, reports) and **Approve** it (it goes live for 60 days) or **Reject** it with a reason the seller sees. **Remove** hides a listing and closes its offers but keeps the record. **Delete** is **permanent**: the listing, its offers, their messages and its reports are erased.
+- **Reports tab:** what customers reported, with Resolve / Reopen.
+- **Offers tab:** read only. Every offer with both phone numbers and the message thread. Admin is the only place phone numbers are shown freely.
+
+How it works:
+
+- A customer must be logged in to post, offer, message, report or upload. Browsing is public.
+- Dog listings need a breeder registration number. Up to 8 photos per listing.
+- Editing a listing sends it back to review (an active listing disappears until approved again).
+- Offers take turns: the seller answers an open offer (accept, reject or counter), the buyer answers a counter. Either side can reject or withdraw while it is still open. A buyer has one open offer per listing.
+- Accepting reserves the listing and rejects the other offers. Only then does each side see the other's phone number: the seller sees the phone the buyer typed into that offer, the buyer sees the seller's listing phone. Phone numbers never appear in listings, other offers, messages or reports.
+- If the deal falls through, the seller can **release** the listing: it goes back on sale and the accepted offer is withdrawn (the phone numbers stop showing).
+- Listings expire 60 days after approval. They drop out of the marketplace on time; run `npm run expire:mates` (for example daily from cron) to set their status to expired and close their offers.
+
+Photos are stored with Medusa's file module, on local disk for now (`backend/apps/backend/static`, not committed). To move to Cloudflare R2, change the file provider in `medusa-config.ts` to `@medusajs/medusa/file-s3` with the R2 endpoint, bucket and keys; no code changes.
+
+Customer-facing endpoints (publishable key header as usual; "login" means the Medusa customer session or bearer token):
+
+```
+GET    /store/mates/listings                       public: active listings (pet_type, breed, city, gender, min_price, max_price,
+                                                   sort=newest|price_asc|price_desc, limit, offset)
+GET    /store/mates/listings/:id                   public: one active listing
+POST   /store/mates/listings                       login: post a listing (waits for review)
+POST   /store/mates/uploads                        login: one photo (form field "file"; jpg, png or webp, up to 5 MB) -> { url }
+GET    /store/mates/my/listings                    login: my listings, any status
+GET    /store/mates/my/listings/:id                login: one of mine
+POST   /store/mates/my/listings/:id                login: edit (back to review)
+DELETE /store/mates/my/listings/:id                login: delete permanently
+POST   /store/mates/my/listings/:id/sold           login: mark sold
+POST   /store/mates/my/listings/:id/release        login: put a reserved listing back on sale
+POST   /store/mates/listings/:id/offers            login: make an offer { amount, buyer_phone }
+GET    /store/mates/my/offers                      login: offers I made
+GET    /store/mates/my/received-offers             login: offers on my listings (listing_id, status)
+GET    /store/mates/offers/:id                     login, buyer or seller of that offer
+POST   /store/mates/offers/:id/accept | reject | withdraw
+POST   /store/mates/offers/:id/counter             { amount }
+GET    /store/mates/offers/:id/messages            buyer or seller only
+POST   /store/mates/offers/:id/messages            { body }
+POST   /store/mates/listings/:id/report            login: { reason }
+```
+
+The website and mobile screens for Mates are not built yet; they will call these endpoints. The reasoning behind the main choices is in `claude/mates-module-decision.md`.
+
+Tests: `npm run test:unit` needs nothing. The HTTP tests create a throwaway database, so they need your Postgres login in `DB_USERNAME`, `DB_PASSWORD` and `DB_HOST` (the same user and password as in `DATABASE_URL`), for example `DB_USERNAME=petzy DB_PASSWORD=petzy_dev_pw DB_HOST=localhost npm run test:integration:http`.
 
 ## Step 8 – Run the customer website
 
@@ -262,6 +320,7 @@ cd ../../.. && ./scripts/sync-keys.sh
 cd backend/apps/backend && npm run dev     # wait for "Server is ready", then in a second terminal:
 npm run seed:petzy                         # (from backend/apps/backend) loads the Petzy shop data again
 npm run seed:vet                           # optional sample vets
+npm run seed:mates                         # optional sample Mates listings
 ```
 
 ## Troubleshooting
@@ -285,6 +344,7 @@ npm run seed:vet                           # optional sample vets
 
 - Real values for the placeholders from Step 7: warehouse address, shipping prices, **GST rates** (with your CA), and your own product photos and descriptions.
 - Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
-- Not built yet: Mates / breeder verification, insurance referrals, subscriptions. These become custom Medusa modules in the same way as the vet module.
-- Razorpay payments, image storage (Cloudflare R2) and hosting (Railway / Render / Vercel) are decided but not wired up.
+- Mates marketplace: the backend and the Admin screen are built (Step 7c). Still to do: the website and mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
+- Not built yet: insurance referrals, subscriptions. These become custom Medusa modules in the same way as the vet and Mates modules.
+- Razorpay payments, moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.
