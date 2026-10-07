@@ -1,0 +1,44 @@
+# Petzy local database + DB UI (pgAdmin)
+#   docker compose up -d     -> start
+#   docker compose down      -> stop (data is kept)
+#   docker compose down -v   -> stop AND delete all data
+services:
+  postgres:
+    image: postgres:16
+    container_name: petzy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: petzy
+      POSTGRES_PASSWORD: petzy_dev_pw
+      POSTGRES_DB: petzy
+    ports:
+      - "5432:5432"
+    volumes:
+      - petzy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petzy -d petzy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: petzy-pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@petzy.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - petzy_pgadmin:/var/lib/pgadmin
+      - ./docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
+
+volumes:
+  petzy_pgdata:
+  petzy_pgadmin:
