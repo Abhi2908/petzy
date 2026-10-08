@@ -1,8 +1,16 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
+import {
+  createStep,
+  createWorkflow,
+  StepResponse,
+  transform,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk"
 import { MATES_MODULE } from "../modules/mates"
 import MatesModuleService from "../modules/mates/service"
 import { sideOf } from "../modules/mates/utils/rules"
+import { MATES_EVENTS } from "../modules/mates/events"
 
 export type CreateMatesMessageInput = { offer_id: string; customer_id: string; body: string }
 
@@ -35,6 +43,10 @@ export const createMatesMessageWorkflow = createWorkflow(
   "create-mates-message",
   (input: CreateMatesMessageInput) => {
     const id = createMatesMessageStep(input)
+    emitEventStep({
+      eventName: MATES_EVENTS.MESSAGE_CREATED,
+      data: transform({ id }, ({ id }) => ({ id: id })),
+    })
     return new WorkflowResponse(id)
   }
 )

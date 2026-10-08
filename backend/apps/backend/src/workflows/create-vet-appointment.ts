@@ -1,9 +1,17 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
+import {
+  createStep,
+  createWorkflow,
+  StepResponse,
+  transform,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk"
 import { VET_MODULE } from "../modules/vet"
 import VetModuleService from "../modules/vet/service"
 import { clinicDateOf, generateSlots } from "../modules/vet/utils/slots"
 import { isUniqueViolation } from "./steps/vet-helpers"
+import { VET_EVENTS } from "../modules/vet/events"
 
 export type CreateVetAppointmentInput = {
   provider_id: string
@@ -84,6 +92,10 @@ export const createVetAppointmentWorkflow = createWorkflow(
   "create-vet-appointment",
   (input: CreateVetAppointmentInput) => {
     const appointmentId = createVetAppointmentStep(input)
+    emitEventStep({
+      eventName: VET_EVENTS.APPOINTMENT_BOOKED,
+      data: transform({ appointmentId }, ({ appointmentId }) => ({ id: appointmentId })),
+    })
     return new WorkflowResponse(appointmentId)
   }
 )

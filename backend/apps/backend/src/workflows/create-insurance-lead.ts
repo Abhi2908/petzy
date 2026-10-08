@@ -1,8 +1,16 @@
 import { MedusaError, Modules } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
+import {
+  createStep,
+  createWorkflow,
+  StepResponse,
+  transform,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk"
 import { INSURANCE_MODULE } from "../modules/insurance"
 import InsuranceModuleService from "../modules/insurance/service"
 import { DAILY_LEAD_LIMIT, LEAD_WINDOW_MS, phoneKey, planMismatch } from "../modules/insurance/utils/rules"
+import { INSURANCE_EVENTS } from "../modules/insurance/events"
 
 export type CreateInsuranceLeadInput = {
   plan_id: string
@@ -73,6 +81,10 @@ export const createInsuranceLeadWorkflow = createWorkflow(
   "create-insurance-lead",
   (input: CreateInsuranceLeadInput) => {
     const id = createInsuranceLeadStep(input)
+    emitEventStep({
+      eventName: INSURANCE_EVENTS.LEAD_CREATED,
+      data: transform({ id }, ({ id }) => ({ id: id })),
+    })
     return new WorkflowResponse(id)
   }
 )

@@ -275,6 +275,40 @@ POST /store/insurance/leads          send a lead { plan_id, customer_name, phone
 
 The website and mobile screens for insurance are not built yet; they will call these endpoints. The reasoning behind the main choices is in `claude/insurance-module-decision.md`.
 
+### Step 7e – Email notifications
+
+The backend sends transactional emails through Medusa's notification module. Nothing to install and no migration.
+
+**Out of the box (development)** nothing is sent: every email is written to the backend's terminal instead, starting with `[email, log only]`, so you can read exactly what a customer would get.
+
+**To send real email** with [Resend](https://resend.com): create an API key, verify your sending domain in Resend, then set these in `backend/apps/backend/.env` and restart the backend:
+
+```
+RESEND_API_KEY=re_...                  # from the Resend dashboard (never commit it)
+NOTIFY_FROM_EMAIL=Petzy <hello@yourdomain.in>
+ADMIN_NOTIFY_EMAIL=team@yourdomain.in  # where new insurance leads go
+STOREFRONT_URL=https://yourdomain.in/in   # used for links in emails
+```
+
+Both `RESEND_API_KEY` and `NOTIFY_FROM_EMAIL` are needed. If either is empty, emails go to the log.
+
+What is sent:
+
+| When | Who gets it |
+|---|---|
+| Vet appointment booked | the customer (if they gave an email): vet, clinic, date and time (IST) and "Pay Rs X at the clinic"; and the clinic's contact email |
+| Vet appointment cancelled (Admin sets the status) | the customer and the clinic |
+| Mates: new offer | the seller |
+| Mates: seller counters or rejects | the buyer |
+| Mates: offer accepted | both sides, each with the other's phone number (the only Mates email with a phone number) |
+| Mates: an accepted offer closes other offers | the other buyers ("the seller accepted another offer") |
+| Mates: a buyer sends a message | the seller (a short preview, with any phone number hidden) |
+| Mates: Admin approves or rejects a listing | the seller (with the reason) |
+| Insurance lead | `ADMIN_NOTIFY_EMAIL` (skipped if empty) |
+| Order placed | the customer (order confirmation) |
+
+Switch a group off with `NOTIFY_VET=false`, `NOTIFY_MATES=false`, `NOTIFY_INSURANCE=false` or `NOTIFY_ORDERS=false` (all on by default). A failed email never fails the booking, offer or order: it is logged and skipped. Templates are in `backend/apps/backend/src/notifications/templates`. SMS is not built yet; `src/notifications/send.ts` explains where it plugs in. The reasoning behind the main choices is in `claude/notifications-decision.md`.
+
 ## Step 8 – Run the customer website
 
 Open a **new terminal**:
@@ -378,6 +412,7 @@ npm run seed:insurance                     # optional sample insurance partners 
 - Real values for the placeholders from Step 7: warehouse address, shipping prices, **GST rates** (with your CA), and your own product photos and descriptions.
 - Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
 - Mates marketplace: the backend and the Admin screen are built (Step 7c). The website screens are built too. Still to do: the mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
+- Email notifications are built (Step 7e). Still to do: SMS (and WhatsApp), verifying the sending domain in Resend before launch, and emails for Mates events not covered yet (see `claude/notifications-decision.md`).
 - Insurance referrals: the backend and the Admin screen are built (Step 7d). Still to do: the website and mobile app screens (with a consent line on the lead form), and sending leads to partners automatically (today staff export a CSV or contact them by hand).
 - Not built yet: subscriptions. This becomes a custom Medusa module in the same way as the vet, Mates and insurance modules.
 - Razorpay payments, moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.

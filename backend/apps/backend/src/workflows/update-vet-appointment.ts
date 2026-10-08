@@ -1,8 +1,16 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
+import {
+  createStep,
+  createWorkflow,
+  StepResponse,
+  transform,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk"
 import { VET_MODULE } from "../modules/vet"
 import VetModuleService from "../modules/vet/service"
 import { isUniqueViolation } from "./steps/vet-helpers"
+import { VET_EVENTS } from "../modules/vet/events"
 
 export type UpdateVetAppointmentInput = {
   id: string
@@ -27,7 +35,10 @@ const updateVetAppointmentStep = createStep(
       }
       throw error
     }
-    return new StepResponse(input.id, { id: before.id, status: before.status, notes: before.notes })
+    return new StepResponse(
+      { id: input.id, previous_status: before.status },
+      { id: before.id, status: before.status, notes: before.notes }
+    )
   },
   async (snapshot, { container }) => {
     if (!snapshot) {
@@ -41,7 +52,9 @@ const updateVetAppointmentStep = createStep(
 export const updateVetAppointmentWorkflow = createWorkflow(
   "update-vet-appointment",
   (input: UpdateVetAppointmentInput) => {
-    const appointmentId = updateVetAppointmentStep(input)
+    const updated = updateVetAppointmentStep(input)
+    emitEventStep({ eventName: VET_EVENTS.APPOINTMENT_UPDATED, data: updated })
+    const appointmentId = transform({ updated }, ({ updated }) => updated.id)
     return new WorkflowResponse(appointmentId)
   }
 )

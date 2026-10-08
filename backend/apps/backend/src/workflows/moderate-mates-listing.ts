@@ -1,9 +1,17 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
+import {
+  createStep,
+  createWorkflow,
+  StepResponse,
+  transform,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk"
 import { MATES_MODULE } from "../modules/mates"
 import MatesModuleService from "../modules/mates/service"
 import { expiresAtFrom, ListingStatus } from "../modules/mates/utils/rules"
 import { closeOffers, getListing, moveListing, OfferSnapshot, restoreOffers } from "./steps/mates-helpers"
+import { MATES_EVENTS } from "../modules/mates/events"
 
 export type ModerateMatesListingInput =
   | { id: string; action: "approve" }
@@ -75,6 +83,10 @@ export const moderateMatesListingWorkflow = createWorkflow(
   "moderate-mates-listing",
   (input: ModerateMatesListingInput) => {
     const id = moderateMatesListingStep(input)
+    emitEventStep({
+      eventName: MATES_EVENTS.LISTING_MODERATED,
+      data: transform({ id, input }, ({ id, input }) => ({ id, action: input.action })),
+    })
     return new WorkflowResponse(id)
   }
 )
