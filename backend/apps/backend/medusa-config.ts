@@ -20,6 +20,9 @@ module.exports = defineConfig({
     {
       resolve: './src/modules/mates',
     },
+    {
+      resolve: './src/modules/insurance',
+    },
     // Mates photo uploads. Local disk for now (served from /static). To move to Cloudflare R2,
     // replace this provider with `@medusajs/medusa/file-s3` and the R2 endpoint, bucket and keys.
     {

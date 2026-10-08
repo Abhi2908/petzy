@@ -26,7 +26,8 @@
     "seed:petzy": "medusa exec ./src/scripts/seed-petzy.ts",
     "seed:vet": "medusa exec ./src/scripts/seed-vet.ts",
     "seed:mates": "medusa exec ./src/scripts/seed-mates.ts",
-    "expire:mates": "medusa exec ./src/scripts/expire-mates-listings.ts"
+    "expire:mates": "medusa exec ./src/scripts/expire-mates-listings.ts",
+    "seed:insurance": "medusa exec ./src/scripts/seed-insurance.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.21.2",

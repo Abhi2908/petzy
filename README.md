@@ -244,6 +244,37 @@ On the website, Mates is in the menu ("Mates") at http://localhost:8000/in/mates
 
 Tests: `npm run test:unit` needs nothing. The HTTP tests create a throwaway database, so they need your Postgres login in `DB_USERNAME`, `DB_PASSWORD` and `DB_HOST` (the same user and password as in `DATABASE_URL`), for example `DB_USERNAME=petzy DB_PASSWORD=petzy_dev_pw DB_HOST=localhost npm run test:integration:http`.
 
+### Step 7d – Insurance referrals (new tables and sample plans)
+
+Petzy does not sell or underwrite insurance. It lists partner insurers' plans and passes interested customers to the partner as leads. Create the three tables (`insurance_partner`, `insurance_plan`, `insurance_lead`), then restart the backend:
+
+```bash
+cd backend/apps/backend
+npx medusa db:migrate        # creates the insurance tables
+# restart the backend (Ctrl+C, then npm run dev), and in a second terminal:
+npm run seed:insurance       # optional: 2 SAMPLE partners and 4 plans, made-up names (safe to re-run)
+```
+
+Then open Admin at http://localhost:9000/app and click **Insurance** in the left menu:
+
+- **Partners tab:** add and edit insurers (name, logo and website links, contact email and phone, notes), activate or deactivate them, and delete them. Contact details and notes are for staff only. Deactivating a partner hides all of its plans. Delete is **permanent** and also deletes the partner's plans and every lead sent for them; the confirmation says how many first. To keep the leads, deactivate instead.
+- **Plans tab:** add and edit plans for a partner: pets covered, youngest and oldest age (in months), the yearly premium it starts from and the cover amount (whole rupees, indicative only), highlights and exclusions (one per line, up to 10 each), and the order on the page. Deleting a plan also deletes its leads, again with a warning.
+- **Leads tab:** filter by status, open a lead to change its status (New, Contacted, Sent to partner, Converted, Closed) and keep internal notes, delete it, and **Export CSV** of the leads in the current filter (opens in Excel; India times, ₹ and names display correctly).
+
+How leads work: any visitor can send one, no account needed. The phone number is required, and the pet's type and age must fit the plan (for example "Complete Care covers pets aged 3 months to 8 years. Your pet is 9 years."). To stop abuse, one phone number can send at most 3 requests in 24 hours, however the number is written (`+91 98111 22333`, `098111 22333` and `9811122333` count as one).
+
+Customer-facing endpoints (publishable key header as usual):
+
+```
+GET  /store/insurance/plans          active plans of active partners, in page order
+                                     (filters: pet_type, pet_age_months, max_premium)
+GET  /store/insurance/plans/:id      one active plan
+POST /store/insurance/leads          send a lead { plan_id, customer_name, phone, pet_type, pet_age_months,
+                                     email?, pet_name?, breed?, city?, pincode?, message? } (guests allowed)
+```
+
+The website and mobile screens for insurance are not built yet; they will call these endpoints. The reasoning behind the main choices is in `claude/insurance-module-decision.md`.
+
 ## Step 8 – Run the customer website
 
 Open a **new terminal**:
@@ -322,6 +353,7 @@ cd backend/apps/backend && npm run dev     # wait for "Server is ready", then in
 npm run seed:petzy                         # (from backend/apps/backend) loads the Petzy shop data again
 npm run seed:vet                           # optional sample vets
 npm run seed:mates                         # optional sample Mates listings
+npm run seed:insurance                     # optional sample insurance partners and plans
 ```
 
 ## Troubleshooting
@@ -346,6 +378,7 @@ npm run seed:mates                         # optional sample Mates listings
 - Real values for the placeholders from Step 7: warehouse address, shipping prices, **GST rates** (with your CA), and your own product photos and descriptions.
 - Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
 - Mates marketplace: the backend and the Admin screen are built (Step 7c). The website screens are built too. Still to do: the mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
-- Not built yet: insurance referrals, subscriptions. These become custom Medusa modules in the same way as the vet and Mates modules.
+- Insurance referrals: the backend and the Admin screen are built (Step 7d). Still to do: the website and mobile app screens (with a consent line on the lead form), and sending leads to partners automatically (today staff export a CSV or contact them by hand).
+- Not built yet: subscriptions. This becomes a custom Medusa module in the same way as the vet, Mates and insurance modules.
 - Razorpay payments, moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.

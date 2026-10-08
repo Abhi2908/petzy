@@ -1,5 +1,13 @@
 import { authenticate, configureStoreSearch, defineMiddlewares, validateAndTransformBody } from '@medusajs/framework/http'
+import {
+  CreateInsurancePartnerSchema,
+  CreateInsurancePlanSchema,
+  UpdateInsuranceLeadSchema,
+  UpdateInsurancePartnerSchema,
+  UpdateInsurancePlanSchema,
+} from './admin/insurance/validators'
 import { RejectMatesListingSchema, UpdateMatesReportSchema } from './admin/mates/validators'
+import { CreateInsuranceLeadSchema } from './store/insurance/validators'
 import {
   CreateVetProviderSchema,
   UpdateVetAppointmentSchema,
@@ -108,6 +116,37 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/mates/reports/:id',
       middlewares: [validateAndTransformBody(UpdateMatesReportSchema)],
+    },
+    {
+      // Guests can send leads; the workflow enforces plan fit and the daily limit.
+      method: ['POST'],
+      matcher: '/store/insurance/leads',
+      middlewares: [validateAndTransformBody(CreateInsuranceLeadSchema)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/insurance/partners',
+      middlewares: [validateAndTransformBody(CreateInsurancePartnerSchema)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/insurance/partners/:id',
+      middlewares: [validateAndTransformBody(UpdateInsurancePartnerSchema)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/insurance/plans',
+      middlewares: [validateAndTransformBody(CreateInsurancePlanSchema)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/insurance/plans/:id',
+      middlewares: [validateAndTransformBody(UpdateInsurancePlanSchema)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/insurance/leads/:id',
+      middlewares: [validateAndTransformBody(UpdateInsuranceLeadSchema)],
     },
   ],
 })
