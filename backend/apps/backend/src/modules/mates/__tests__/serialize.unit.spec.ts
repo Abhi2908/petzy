@@ -1,4 +1,4 @@
-import { offerForSide, ownListing, publicListing, publicMessage, publicReport } from "../utils/serialize"
+import { offerForSide, ownListing, ownListingWithPhone, publicListing, publicMessage, publicReport } from "../utils/serialize"
 
 const SELLER_PHONE = "+91 91111 11111"
 const BUYER_PHONE = "+91 92222 22222"
@@ -53,6 +53,13 @@ describe("mates phone privacy (serializers)", () => {
       expect(view).not.toHaveProperty("seller_phone")
       expect(view).not.toHaveProperty("seller_customer_id")
     }
+  })
+
+  it("adds the seller's phone only in the owner's list view, still without customer ids", () => {
+    const view = ownListingWithPhone(listing)
+    expect(view.seller_phone).toBe(SELLER_PHONE)
+    expect(text(view)).not.toContain("cus_seller")
+    expect(view).not.toHaveProperty("seller_customer_id")
   })
 
   it("hides both phones on offers that are not accepted, for both sides", () => {

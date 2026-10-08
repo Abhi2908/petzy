@@ -4,6 +4,8 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import { useActionState } from "react"
+import { useSearchParams } from "next/navigation"
+import { safeReturnPath } from "@lib/util/safe-return-path"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -11,6 +13,8 @@ type Props = {
 
 const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(login, null)
+  // Set when another page sent the customer here to sign in; they go back there afterwards.
+  const returnTo = safeReturnPath(useSearchParams().get("return_to"))
 
   return (
     <div
@@ -31,6 +35,7 @@ const Login = ({ setCurrentView }: Props) => {
         </div>
       )}
       <form className="w-full" action={formAction}>
+        {returnTo && <input type="hidden" name="return_to" value={returnTo} />}
         <div className="flex flex-col w-full gap-y-2">
           <Input
             label="Email"

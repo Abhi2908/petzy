@@ -45,16 +45,18 @@ export function sideOf(
 /**
  * Checks one offer action and returns the offer's new state. Accept and counter belong to the side whose
  * turn it is. Reject and withdraw are open to either side while the offer is live. Accepting and countering
- * also need the listing to be active (a listing under review, reserved or sold is frozen).
+ * also need the listing to be active (a listing under review, reserved or sold is frozen). Countering is
+ * only possible on negotiable listings: a firm price is not up for discussion.
  */
 export function applyOfferAction(input: {
   action: OfferAction
   side: Side
   status: OfferStatus
   listingStatus: ListingStatus
+  priceNegotiable: boolean
   amount?: number
 }): { status: OfferStatus; last_actor: Side; amount?: number } {
-  const { action, side, status, listingStatus, amount } = input
+  const { action, side, status, listingStatus, priceNegotiable, amount } = input
   if (!isLive(status)) {
     throw notAllowed(`This offer is already ${status}.`)
   }
@@ -77,30 +79,38 @@ export function applyOfferAction(input: {
     return { status: "accepted", last_actor: side }
   }
 
+  if (!priceNegotiable) {
+    throw notAllowed("This listing has a firm price, so offers cannot be countered.")
+  }
   if (!Number.isInteger(amount) || (amount as number) <= 0) {
     throw notAllowed("A counter offer needs an amount greater than 0.")
   }
   return { status: side === "seller" ? "countered" : "open", last_actor: side, amount }
 }
 
-/** Checks that a buyer may make a new offer on a listing. */
+/**
+ * Checks that a buyer may make a new offer on a listing. On a negotiable listing any amount above 0 is
+ * fine. On a firm-price listing the only possible offer is the listing price itself ("buy at this price").
+ */
 export function assertCanMakeOffer(input: {
   buyerId: string
   amount: number
-  listing: { seller_customer_id: string; status: ListingStatus; price_negotiable: boolean }
+  listing: { seller_customer_id: string; status: ListingStatus; price_negotiable: boolean; price: number }
 }) {
   const { buyerId, amount, listing } = input
   if (listing.status !== "active") {
     throw notAllowed("This listing is not open for offers right now.")
-  }
-  if (!listing.price_negotiable) {
-    throw notAllowed("The seller is not taking offers on this listing.")
   }
   if (listing.seller_customer_id === buyerId) {
     throw notAllowed("You cannot make an offer on your own listing.")
   }
   if (!Number.isInteger(amount) || amount <= 0) {
     throw notAllowed("The offer amount must be greater than 0.")
+  }
+  if (!listing.price_negotiable && amount !== listing.price) {
+    throw notAllowed(
+      `This listing has a firm price of ₹${listing.price.toLocaleString("en-IN")}. Offer exactly that amount.`
+    )
   }
 }
 

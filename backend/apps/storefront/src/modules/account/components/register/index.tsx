@@ -1,6 +1,8 @@
 "use client"
 
 import { useActionState } from "react"
+import { useSearchParams } from "next/navigation"
+import { safeReturnPath } from "@lib/util/safe-return-path"
 import Input from "@modules/common/components/input"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -14,6 +16,8 @@ type Props = {
 
 const Register = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(signup, null)
+  // Set when another page sent the customer here to sign in; they go back there afterwards.
+  const returnTo = safeReturnPath(useSearchParams().get("return_to"))
 
   return (
     <div
@@ -37,6 +41,7 @@ const Register = ({ setCurrentView }: Props) => {
         </div>
       )}
       <form className="w-full flex flex-col" action={formAction}>
+        {returnTo && <input type="hidden" name="return_to" value={returnTo} />}
         <div className="flex flex-col w-full gap-y-2">
           <Input
             label="First name"

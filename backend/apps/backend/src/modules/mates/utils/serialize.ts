@@ -1,6 +1,7 @@
 // Shapes Mates records for the Store API. Every store response goes through these allow-lists, so a new
-// column never leaks by accident. Phone numbers and customer ids are left out everywhere except one place:
-// an accepted offer shows each side the other side's phone. Admin routes return full records instead.
+// column never leaks by accident. Phone numbers and customer ids are left out everywhere except two places:
+// the seller's own listing reads (GET /store/mates/my/listings and /my/listings/:id) show their seller_phone,
+// and an accepted offer shows each side the other side's phone. Admin routes return full records instead.
 import { Side, turnOf } from "./rules"
 
 type ListingRecord = {
@@ -74,7 +75,7 @@ export function publicListing(l: ListingRecord) {
   }
 }
 
-/** The seller's own view: adds moderation details. The phone stays out of listing responses. */
+/** The seller's own view: adds moderation details. No phone: used for owner responses other than reads. */
 export function ownListing(l: ListingRecord) {
   return {
     ...publicListing(l),
@@ -82,6 +83,11 @@ export function ownListing(l: ListingRecord) {
     expires_at: l.expires_at,
     updated_at: l.updated_at,
   }
+}
+
+/** Only for GET /store/mates/my/listings and /my/listings/:id, where the owner reads back their phone. */
+export function ownListingWithPhone(l: ListingRecord) {
+  return { ...ownListing(l), seller_phone: l.seller_phone }
 }
 
 /**

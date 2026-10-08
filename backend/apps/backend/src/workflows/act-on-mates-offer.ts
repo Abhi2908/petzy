@@ -37,6 +37,7 @@ const actOnMatesOfferStep = createStep(
       side,
       status,
       listingStatus: offer.listing.status as ListingStatus,
+      priceNegotiable: offer.listing.price_negotiable,
       amount: input.amount,
     })
     const snapshot: Snapshot = {

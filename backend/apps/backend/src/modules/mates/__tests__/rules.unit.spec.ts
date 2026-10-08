@@ -22,7 +22,7 @@ const notAllowed = (fn: () => unknown, message?: RegExp) => {
   throw new Error("expected NOT_ALLOWED")
 }
 
-const activeNegotiable = { seller_customer_id: "cus_seller", status: "active" as const, price_negotiable: true }
+const activeNegotiable = { seller_customer_id: "cus_seller", status: "active" as const, price_negotiable: true, price: 20000 }
 
 describe("mates offer rules", () => {
   it("knows whose turn it is", () => {
@@ -35,7 +35,7 @@ describe("mates offer rules", () => {
   })
 
   it("lets only the side whose turn it is accept or counter", () => {
-    const base = { listingStatus: "active" as const }
+    const base = { listingStatus: "active" as const, priceNegotiable: true }
     expect(applyOfferAction({ ...base, action: "accept", side: "seller", status: "open" })).toEqual({ status: "accepted", last_actor: "seller" })
     expect(applyOfferAction({ ...base, action: "accept", side: "buyer", status: "countered" })).toEqual({ status: "accepted", last_actor: "buyer" })
     notAllowed(() => applyOfferAction({ ...base, action: "accept", side: "buyer", status: "open" }), /seller's turn/)
@@ -43,7 +43,7 @@ describe("mates offer rules", () => {
   })
 
   it("flips the turn on a counter and needs a positive whole amount", () => {
-    const base = { listingStatus: "active" as const }
+    const base = { listingStatus: "active" as const, priceNegotiable: true }
     expect(applyOfferAction({ ...base, action: "counter", side: "seller", status: "open", amount: 900 })).toEqual({
       status: "countered",
       last_actor: "seller",
@@ -59,7 +59,7 @@ describe("mates offer rules", () => {
   })
 
   it("lets either side reject or withdraw while the offer is live", () => {
-    const base = { listingStatus: "active" as const }
+    const base = { listingStatus: "active" as const, priceNegotiable: true }
     for (const status of ["open", "countered"] as const) {
       for (const side of ["buyer", "seller"] as const) {
         expect(applyOfferAction({ ...base, action: "reject", side, status }).status).toBe("rejected")
@@ -71,16 +71,34 @@ describe("mates offer rules", () => {
   it("refuses every action once the offer is closed", () => {
     for (const status of ["accepted", "rejected", "withdrawn"] as const) {
       for (const action of ["accept", "reject", "counter", "withdraw"] as const) {
-        notAllowed(() => applyOfferAction({ action, side: "seller", status, listingStatus: "active", amount: 5 }), /already/)
+        notAllowed(() => applyOfferAction({ action, side: "seller", status, listingStatus: "active", priceNegotiable: true, amount: 5 }), /already/)
       }
     }
   })
 
   it("freezes accept and counter while the listing is not active", () => {
     for (const listingStatus of ["pending_review", "reserved", "sold"] as const) {
-      notAllowed(() => applyOfferAction({ action: "accept", side: "seller", status: "open", listingStatus }), /not open for offers/)
-      expect(applyOfferAction({ action: "withdraw", side: "buyer", status: "open", listingStatus }).status).toBe("withdrawn")
+      notAllowed(() => applyOfferAction({ action: "accept", side: "seller", status: "open", listingStatus, priceNegotiable: true }), /not open for offers/)
+      expect(applyOfferAction({ action: "withdraw", side: "buyer", status: "open", listingStatus, priceNegotiable: true }).status).toBe("withdrawn")
     }
+  })
+
+  it("takes only the listing price on a firm-price listing", () => {
+    const firm = { ...activeNegotiable, price_negotiable: false }
+    expect(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 20000, listing: firm })).not.toThrow()
+    notAllowed(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 19999, listing: firm }), /firm price of ₹20,000/)
+    notAllowed(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 25000, listing: firm }), /exactly that amount/)
+    notAllowed(() => assertCanMakeOffer({ buyerId: "cus_seller", amount: 20000, listing: firm }), /own listing/)
+    // Negotiable listings keep taking any amount above 0.
+    expect(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 1, listing: activeNegotiable })).not.toThrow()
+  })
+
+  it("refuses counters on a firm-price listing but still allows accept, reject and withdraw", () => {
+    const firm = { listingStatus: "active" as const, priceNegotiable: false }
+    notAllowed(() => applyOfferAction({ ...firm, action: "counter", side: "seller", status: "open", amount: 100 }), /firm price/)
+    expect(applyOfferAction({ ...firm, action: "accept", side: "seller", status: "open" }).status).toBe("accepted")
+    expect(applyOfferAction({ ...firm, action: "reject", side: "seller", status: "open" }).status).toBe("rejected")
+    expect(applyOfferAction({ ...firm, action: "withdraw", side: "buyer", status: "open" }).status).toBe("withdrawn")
   })
 
   it("checks a new offer", () => {
@@ -88,10 +106,6 @@ describe("mates offer rules", () => {
     notAllowed(() => assertCanMakeOffer({ buyerId: "cus_seller", amount: 500, listing: activeNegotiable }), /own listing/)
     notAllowed(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 0, listing: activeNegotiable }), /greater than 0/)
     notAllowed(() => assertCanMakeOffer({ buyerId: "cus_buyer", amount: -5, listing: activeNegotiable }), /greater than 0/)
-    notAllowed(
-      () => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 500, listing: { ...activeNegotiable, price_negotiable: false } }),
-      /not taking offers/
-    )
     notAllowed(
       () => assertCanMakeOffer({ buyerId: "cus_buyer", amount: 500, listing: { ...activeNegotiable, status: "reserved" } }),
       /not open/

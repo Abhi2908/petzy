@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { FetchError } from "@medusajs/js-sdk"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
+import { safeReturnPath } from "@lib/util/safe-return-path"
 import {
   getAuthHeaders,
   getCacheOptions,
@@ -121,7 +122,10 @@ export async function signup(
 
   // Continue by logging in. The login response tells us whether the backend
   // requires email verification — we don't need a storefront-side flag.
-  return completeLogin(customerForm.email, password)
+  return returnAfterSignIn(
+    await completeLogin(customerForm.email, password),
+    formData
+  )
 }
 
 export async function login(
@@ -131,7 +135,20 @@ export async function login(
   const email = formData.get("email") as string
   const password = formData.get("password") as string
 
-  return completeLogin(email, password)
+  return returnAfterSignIn(await completeLogin(email, password), formData)
+}
+
+// After a successful sign-in, sends the customer back to the page that asked them to sign in (the
+// form's `return_to`, checked to be a path on this site). Otherwise the account page shows as before.
+function returnAfterSignIn(
+  result: CustomerAuthState,
+  formData: FormData
+): CustomerAuthState {
+  const target = safeReturnPath(formData.get("return_to"))
+  if (result?.state === "success" && target) {
+    redirect(target)
+  }
+  return result
 }
 
 // Logs the customer in and reconciles the customer record. The behavior is

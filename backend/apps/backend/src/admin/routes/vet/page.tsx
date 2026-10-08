@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Buildings } from "@medusajs/icons"
-import { Container, Heading, Tabs, Toaster } from "@medusajs/ui"
+import { Container, Heading, Tabs } from "@medusajs/ui"
 import { AppointmentsTab } from "../../components/vet/appointments-tab"
 import { ProvidersTab } from "../../components/vet/providers-tab"
 
@@ -20,7 +20,6 @@ const VetPage = () => {
         <Tabs.Content value="providers"><ProvidersTab /></Tabs.Content>
         <Tabs.Content value="appointments"><AppointmentsTab /></Tabs.Content>
       </Tabs>
-      <Toaster />
     </Container>
   )
 }

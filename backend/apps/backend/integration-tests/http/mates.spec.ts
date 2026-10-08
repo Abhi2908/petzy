@@ -278,8 +278,8 @@ medusaIntegrationTestRunner({
         expect(zero.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/greater than 0/) })
         const noPhone = await failure(api.post(`/store/mates/listings/${id}/offers`, { amount: 100 }, buyer))
         expect(noPhone.status).toBe(400)
-        const notNegotiable = await failure(api.post(`/store/mates/listings/${fixed}/offers`, { amount: 100, buyer_phone: BUYER_PHONE }, buyer))
-        expect(notNegotiable.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/not taking offers/) })
+        const belowFirm = await failure(api.post(`/store/mates/listings/${fixed}/offers`, { amount: 19000, buyer_phone: BUYER_PHONE }, buyer))
+        expect(belowFirm.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/firm price of ₹20,000/) })
         const anonymous = await failure(api.post(`/store/mates/listings/${id}/offers`, { amount: 100, buyer_phone: BUYER_PHONE }, publicHeaders))
         expect(anonymous.status).toBe(401)
 
@@ -289,6 +289,39 @@ medusaIntegrationTestRunner({
         await makeOffer(id, buyer, 15000, BUYER_PHONE)
         const second = await failure(api.post(`/store/mates/listings/${id}/offers`, { amount: 16000, buyer_phone: BUYER_PHONE }, buyer))
         expect(second.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/already have an offer/) })
+      })
+
+      it("takes an offer on a firm-price listing only at the asking price, and never a counter", async () => {
+        const fixed = await activeListing({ title: "Fixed price (test)", price_negotiable: false, price: 20000 })
+        for (const amount of [1, 19999, 20001, 40000]) {
+          const wrong = await failure(api.post(`/store/mates/listings/${fixed}/offers`, { amount, buyer_phone: BUYER_PHONE }, buyer))
+          expect(wrong.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/exactly that amount/) })
+        }
+        expect((await failure(api.post(`/store/mates/listings/${fixed}/offers`, { amount: 20000, buyer_phone: SELLER_PHONE }, seller))).data.message).toMatch(
+          /own listing/
+        )
+
+        const offerId = await makeOffer(fixed, buyer, 20000, BUYER_PHONE)
+        const view = (await api.get(`/store/mates/offers/${offerId}`, seller)).data.offer
+        expect(view).toMatchObject({ amount: 20000, status: "open", your_turn: true })
+
+        // One live offer per buyer applies here too.
+        expect((await failure(api.post(`/store/mates/listings/${fixed}/offers`, { amount: 20000, buyer_phone: BUYER_PHONE }, buyer))).data.message).toMatch(
+          /already have an offer/
+        )
+        // A firm price is not up for discussion: no counter, from either side.
+        const counter = await failure(api.post(`/store/mates/offers/${offerId}/counter`, { amount: 18000 }, seller))
+        expect(counter.data).toMatchObject({ type: "not_allowed", message: expect.stringMatching(/firm price/) })
+        expect((await api.get(`/store/mates/offers/${offerId}`, seller)).data.offer).toMatchObject({ status: "open", amount: 20000 })
+
+        // The seller can still accept (or reject); accepting reserves the listing as usual.
+        const accepted = await api.post(`/store/mates/offers/${offerId}/accept`, {}, seller)
+        expect(accepted.data.offer).toMatchObject({ status: "accepted", amount: 20000 })
+        expect(accepted.data.offer.listing.status).toBe("reserved")
+
+        // Negotiable listings keep taking any amount above 0.
+        const negotiable = await activeListing({ title: "Negotiable (test)" })
+        expect((await api.post(`/store/mates/listings/${negotiable}/offers`, { amount: 1, buyer_phone: BUYER_PHONE }, buyer)).status).toBe(201)
       })
 
       it("takes turns: the seller answers open offers, the buyer answers counters", async () => {
@@ -418,8 +451,7 @@ medusaIntegrationTestRunner({
         const responses = [
           await api.get("/store/mates/listings", publicHeaders),
           await api.get(`/store/mates/listings/${id}`, publicHeaders),
-          await api.get("/store/mates/my/listings", seller),
-          await api.get(`/store/mates/my/listings/${id}`, seller),
+          await api.get("/store/mates/my/listings", other),
           await api.get(`/store/mates/offers/${offerId}`, buyer),
           await api.get(`/store/mates/offers/${offerId}`, seller),
           await api.get("/store/mates/my/offers", buyer),
@@ -433,6 +465,52 @@ medusaIntegrationTestRunner({
           expect(JSON.stringify(res.data)).not.toContain(seller.id)
           expect(JSON.stringify(res.data)).not.toContain(buyer.id)
         }
+      })
+
+      it("returns seller_phone to the owner on GET /store/mates/my/listings and /my/listings/:id, and nowhere else", async () => {
+        // The owner's two read routes show the phone they entered.
+        const created = await api.post("/store/mates/listings", listingBody(), seller)
+        const id = created.data.listing.id
+        const mine = await api.get("/store/mates/my/listings", seller)
+        expect(mine.data.listings).toHaveLength(1)
+        expect(mine.data.listings[0]).toMatchObject({ id, seller_phone: SELLER_PHONE })
+        expect(mine.data.listings[0]).not.toHaveProperty("seller_customer_id")
+        const one = await api.get(`/store/mates/my/listings/${id}`, seller)
+        expect(one.data.listing).toMatchObject({ id, seller_phone: SELLER_PHONE })
+        expect(one.data.listing).not.toHaveProperty("seller_customer_id")
+        expectNoPhones(one.data, [SELLER_PHONE])
+        // Another customer cannot read it through the owner route at all.
+        expect((await failure(api.get(`/store/mates/my/listings/${id}`, other))).status).toBe(404)
+        expect((await failure(api.get(`/store/mates/my/listings/${id}`, publicHeaders))).status).toBe(401)
+
+        // Every other response about the same listing stays phone-free, including the owner's other routes.
+        const approved = await api.post(`/admin/mates/listings/${id}/approve`, {}, admin)
+        expect(approved.data.listing.seller_phone).toBe(SELLER_PHONE) // Admin may see it.
+        const offerId = await makeOffer(id, buyer, 15000, BUYER_PHONE)
+        const ownerResponses = [
+          created,
+          await api.post(`/store/mates/my/listings/${id}`, { description: "Updated" }, seller),
+          await api.get("/store/mates/my/received-offers", seller),
+          await api.get(`/store/mates/offers/${offerId}`, seller),
+        ]
+        await api.post(`/admin/mates/listings/${id}/approve`, {}, admin)
+        const otherResponses = [
+          await api.get("/store/mates/listings", publicHeaders),
+          await api.get(`/store/mates/listings/${id}`, publicHeaders),
+          await api.get("/store/mates/my/listings", buyer),
+          await api.get("/store/mates/my/listings", other),
+          await api.get(`/store/mates/offers/${offerId}`, buyer),
+          await api.get("/store/mates/my/offers", buyer),
+        ]
+        ownerResponses.push(await api.post(`/store/mates/my/listings/${id}/sold`, {}, seller))
+        for (const res of [...ownerResponses, ...otherResponses]) {
+          expectNoPhones(res.data)
+        }
+        expect((await failure(api.get("/store/mates/my/listings", publicHeaders))).status).toBe(401)
+
+        // Still there in the owner's reads after the listing changes status.
+        expect((await api.get("/store/mates/my/listings", seller)).data.listings[0]).toMatchObject({ status: "sold", seller_phone: SELLER_PHONE })
+        expect((await api.get(`/store/mates/my/listings/${id}`, seller)).data.listing).toMatchObject({ status: "sold", seller_phone: SELLER_PHONE })
       })
 
       it("after acceptance shows each side only the other's phone, on that offer only", async () => {
@@ -462,11 +540,39 @@ medusaIntegrationTestRunner({
 
         // The rejected bidder learns nothing, and nothing else starts showing phones.
         expectNoPhones((await api.get(`/store/mates/offers/${otherOffer}`, other)).data)
-        expectNoPhones((await api.get(`/store/mates/my/listings/${id}`, seller)).data)
+        // The owner's own listing read shows only their own phone, never the buyer's.
+        expectNoPhones((await api.get(`/store/mates/my/listings/${id}`, seller)).data, [SELLER_PHONE])
         expectNoPhones((await api.get("/store/mates/listings", publicHeaders)).data)
         await api.post(`/store/mates/offers/${offerId}/messages`, { body: "See you Sunday" }, seller)
         expectNoPhones((await api.get(`/store/mates/offers/${offerId}/messages`, buyer)).data)
         expect(JSON.stringify(await api.get("/store/mates/my/offers", buyer).then((r) => r.data))).not.toContain(BUYER_PROFILE_PHONE)
+      })
+
+      it("on a firm-price purchase hides phones until the seller accepts, then each side sees the other's", async () => {
+        const id = await activeListing({ title: "Firm privacy (test)", price_negotiable: false, price: 20000 })
+        const offerId = await makeOffer(id, buyer, 20000, BUYER_PHONE)
+        await api.post(`/store/mates/offers/${offerId}/messages`, { body: "I will take it" }, buyer)
+
+        for (const res of [
+          await api.get(`/store/mates/offers/${offerId}`, buyer),
+          await api.get(`/store/mates/offers/${offerId}`, seller),
+          await api.get("/store/mates/my/offers", buyer),
+          await api.get("/store/mates/my/received-offers", seller),
+          await api.get(`/store/mates/offers/${offerId}/messages`, seller),
+          await api.get(`/store/mates/listings/${id}`, publicHeaders),
+          await failure(api.post(`/store/mates/offers/${offerId}/counter`, { amount: 1 }, seller)),
+        ]) {
+          expectNoPhones(res.data)
+        }
+
+        const accepted = await api.post(`/store/mates/offers/${offerId}/accept`, {}, seller)
+        expect(accepted.data.offer.buyer_phone).toBe(BUYER_PHONE)
+        expectNoPhones(accepted.data, [BUYER_PHONE])
+        const buyerView = await api.get(`/store/mates/offers/${offerId}`, buyer)
+        expect(buyerView.data.offer.seller_phone).toBe(SELLER_PHONE)
+        expectNoPhones(buyerView.data, [SELLER_PHONE])
+        expectNoPhones((await api.get(`/store/mates/offers/${offerId}/messages`, buyer)).data)
+        expect(JSON.stringify(buyerView.data)).not.toContain(BUYER_PROFILE_PHONE)
       })
 
       it("lets Admin see phone numbers", async () => {

@@ -208,7 +208,8 @@ How it works:
 - Dog listings need a breeder registration number. Up to 8 photos per listing.
 - Editing a listing sends it back to review (an active listing disappears until approved again).
 - Offers take turns: the seller answers an open offer (accept, reject or counter), the buyer answers a counter. Either side can reject or withdraw while it is still open. A buyer has one open offer per listing.
-- Accepting reserves the listing and rejects the other offers. Only then does each side see the other's phone number: the seller sees the phone the buyer typed into that offer, the buyer sees the seller's listing phone. Phone numbers never appear in listings, other offers, messages or reports.
+- Firm-price listings (not negotiable) still take offers, but only at exactly the asking price ("Buy at ₹X" on the website), and nobody can counter them. The seller accepts or rejects.
+- Accepting reserves the listing and rejects the other offers. Only then does each side see the other's phone number: the seller sees the phone the buyer typed into that offer, the buyer sees the seller's listing phone. Phone numbers never appear in public listings, other offers, messages or reports. The one other place: sellers see their own listing phone when they read their own listings ("my listings" and one of them by id).
 - If the deal falls through, the seller can **release** the listing: it goes back on sale and the accepted offer is withdrawn (the phone numbers stop showing).
 - Listings expire 60 days after approval. They drop out of the marketplace on time; run `npm run expire:mates` (for example daily from cron) to set their status to expired and close their offers.
 
@@ -222,13 +223,13 @@ GET    /store/mates/listings                       public: active listings (pet_
 GET    /store/mates/listings/:id                   public: one active listing
 POST   /store/mates/listings                       login: post a listing (waits for review)
 POST   /store/mates/uploads                        login: one photo (form field "file"; jpg, png or webp, up to 5 MB) -> { url }
-GET    /store/mates/my/listings                    login: my listings, any status
-GET    /store/mates/my/listings/:id                login: one of mine
+GET    /store/mates/my/listings                    login: my listings, any status (with seller_phone)
+GET    /store/mates/my/listings/:id                login: one of mine (with seller_phone)
 POST   /store/mates/my/listings/:id                login: edit (back to review)
 DELETE /store/mates/my/listings/:id                login: delete permanently
 POST   /store/mates/my/listings/:id/sold           login: mark sold
 POST   /store/mates/my/listings/:id/release        login: put a reserved listing back on sale
-POST   /store/mates/listings/:id/offers            login: make an offer { amount, buyer_phone }
+POST   /store/mates/listings/:id/offers            login: make an offer { amount, buyer_phone } (firm price: amount must equal the price)
 GET    /store/mates/my/offers                      login: offers I made
 GET    /store/mates/my/received-offers             login: offers on my listings (listing_id, status)
 GET    /store/mates/offers/:id                     login, buyer or seller of that offer
@@ -239,7 +240,7 @@ POST   /store/mates/offers/:id/messages            { body }
 POST   /store/mates/listings/:id/report            login: { reason }
 ```
 
-The website and mobile screens for Mates are not built yet; they will call these endpoints. The reasoning behind the main choices is in `claude/mates-module-decision.md`.
+On the website, Mates is in the menu ("Mates") at http://localhost:8000/in/mates: browse with filters, listing pages with offers ("Buy at ₹X" on firm-price listings) and reports, "Post a listing" at /in/mates/new, and "My Mates" at /in/mates/my (your listings and an offers inbox with the message threads; while an offer waits on the other person you can withdraw it). Sign-in prompts bring the customer back to the page they were on after signing in or registering. Photos upload through the website's `/api/mates/uploads`, which passes them to the backend with the customer's login. The mobile app screens are not built yet. The reasoning behind the main choices is in `claude/mates-module-decision.md`.
 
 Tests: `npm run test:unit` needs nothing. The HTTP tests create a throwaway database, so they need your Postgres login in `DB_USERNAME`, `DB_PASSWORD` and `DB_HOST` (the same user and password as in `DATABASE_URL`), for example `DB_USERNAME=petzy DB_PASSWORD=petzy_dev_pw DB_HOST=localhost npm run test:integration:http`.
 
@@ -344,7 +345,7 @@ npm run seed:mates                         # optional sample Mates listings
 
 - Real values for the placeholders from Step 7: warehouse address, shipping prices, **GST rates** (with your CA), and your own product photos and descriptions.
 - Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
-- Mates marketplace: the backend and the Admin screen are built (Step 7c). Still to do: the website and mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
+- Mates marketplace: the backend and the Admin screen are built (Step 7c). The website screens are built too. Still to do: the mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
 - Not built yet: insurance referrals, subscriptions. These become custom Medusa modules in the same way as the vet and Mates modules.
 - Razorpay payments, moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.
