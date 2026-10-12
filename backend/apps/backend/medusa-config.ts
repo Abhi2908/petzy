@@ -1,6 +1,11 @@
 import { loadEnv, defineConfig } from '@medusajs/framework/utils'
+import { razorpayConfig } from './src/modules/razorpay/lib/config'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
+
+// Razorpay is registered only when both API keys are set (see .env.template). Without them the store
+// falls back to the default (manual) payment provider, so development still works without keys.
+const razorpay = razorpayConfig()
 
 // Email notifications go through Resend when both RESEND_API_KEY and NOTIFY_FROM_EMAIL are set, and are
 // written to the server log otherwise (the default in development). See src/notifications.
@@ -41,6 +46,19 @@ module.exports = defineConfig({
     },
     {
       resolve: './src/modules/insurance',
+    },
+    {
+      resolve: './src/modules/razorpay-webhooks',
+    },
+    // Payments. Medusa's default system provider (pp_system_default) is kept; Razorpay (pp_razorpay_razorpay)
+    // is added when configured. Which providers a region offers is set per region (npm run setup:razorpay).
+    {
+      resolve: '@medusajs/medusa/payment',
+      options: {
+        providers: razorpay
+          ? [{ resolve: './src/modules/razorpay', id: 'razorpay', options: razorpay }]
+          : [],
+      },
     },
     // Transactional notifications. Each provider owns one channel. Medusa's own "feed" provider stays, for
     // the Admin notification feed. To add SMS later, add a provider with channels: ['sms'] here (see

@@ -27,7 +27,8 @@
     "seed:vet": "medusa exec ./src/scripts/seed-vet.ts",
     "seed:mates": "medusa exec ./src/scripts/seed-mates.ts",
     "expire:mates": "medusa exec ./src/scripts/expire-mates-listings.ts",
-    "seed:insurance": "medusa exec ./src/scripts/seed-insurance.ts"
+    "seed:insurance": "medusa exec ./src/scripts/seed-insurance.ts",
+    "setup:razorpay": "medusa exec ./src/scripts/setup-razorpay.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.21.2",

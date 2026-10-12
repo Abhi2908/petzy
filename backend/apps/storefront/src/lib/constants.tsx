@@ -33,6 +33,10 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
+  pp_razorpay_razorpay: {
+    title: "Pay online (UPI, cards, netbanking)",
+    icon: <CreditCard />,
+  },
   // Add more payment providers here
 }
 
@@ -45,6 +49,9 @@ export const isStripeLike = (providerId?: string) => {
 
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")
+}
+export const isRazorpay = (providerId?: string) => {
+  return providerId?.startsWith("pp_razorpay_")
 }
 export const isManual = (providerId?: string) => {
   return providerId?.startsWith("pp_system_default")

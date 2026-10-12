@@ -23,6 +23,7 @@ import {
   UpdateMatesListingSchema,
 } from './store/mates/validators'
 import { CreateStoreVetAppointmentSchema } from './store/vet/validators'
+import { RecordRazorpayPaymentSchema } from './store/razorpay/validators'
 
 // Mates routes that act for a customer use the Medusa customer session (or a bearer token).
 // Browsing listings stays public.
@@ -116,6 +117,18 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/mates/reports/:id',
       middlewares: [validateAndTransformBody(UpdateMatesReportSchema)],
+    },
+    {
+      // Right after Razorpay Checkout succeeds; guests can pay too.
+      method: ['POST'],
+      matcher: '/store/razorpay/payments',
+      middlewares: [validateAndTransformBody(RecordRazorpayPaymentSchema)],
+    },
+    {
+      // Razorpay signs the exact bytes it sends, so the raw body must be kept for the signature check.
+      method: ['POST'],
+      matcher: '/hooks/razorpay',
+      bodyParser: { preserveRawBody: true },
     },
     {
       // Guests can send leads; the workflow enforces plan fit and the daily limit.

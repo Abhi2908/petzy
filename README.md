@@ -309,6 +309,46 @@ What is sent:
 
 Switch a group off with `NOTIFY_VET=false`, `NOTIFY_MATES=false`, `NOTIFY_INSURANCE=false` or `NOTIFY_ORDERS=false` (all on by default). A failed email never fails the booking, offer or order: it is logged and skipped. Templates are in `backend/apps/backend/src/notifications/templates`. SMS is not built yet; `src/notifications/send.ts` explains where it plugs in. The reasoning behind the main choices is in `claude/notifications-decision.md`.
 
+### Step 7f – Razorpay payments (test mode)
+
+Checkout offers **Pay online (UPI, cards, netbanking)** through Razorpay. Only test mode is set up for now.
+
+**1. Get test keys.** Sign up at https://dashboard.razorpay.com (no business documents are needed for test mode), switch the dashboard to **Test Mode** (toggle at the top), then go to **Account & Settings > API Keys > Generate Test Key**. Put both values in `backend/apps/backend/.env` (never commit them):
+
+```
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+```
+
+**2. Restart the backend**, then offer Razorpay in the India region (this also removes the manual test payment, so nobody can place an unpaid order):
+
+```bash
+cd backend/apps/backend
+npm run setup:razorpay                   # Razorpay only
+npm run setup:razorpay -- keep-manual    # or keep the manual test payment too, while developing
+```
+
+Without the two keys Razorpay is not loaded and the script changes nothing, so the store keeps working with the manual test payment.
+
+**3. Pay in test mode.** At checkout choose **Pay online**, then **Pay ₹... securely**. In the Razorpay window use Razorpay's test details ([cards](https://razorpay.com/docs/payments/payments/test-card-details/), [UPI](https://razorpay.com/docs/payments/payments/test-upi-details/)):
+
+- UPI ID `success@razorpay` (succeeds) or `failure@razorpay` (fails). Note from Razorpay: in test mode, cancelling a UPI payment counts as a success.
+- Cards: Visa `4100 2800 0000 1007`, Mastercard `5555 5100 0008 1006` or RuPay `6527 6589 0000 1005`, with any future expiry date, any CVV and any OTP of 4 to 10 digits. Razorpay then shows a test page where you pick **Success** or **Failure**.
+
+After a successful payment the order is placed and the confirmation page opens. Closing the window or a failed payment shows a message and you can try again.
+
+**4. Check Admin.** Under **Orders**, the order shows the payment as captured (or authorised, if your Razorpay account is set to capture manually; then use **Capture** on the order). **Refund** on the order refunds through Razorpay.
+
+**Webhooks (optional, for payments where the customer never comes back to the site).** Razorpay must reach your backend over the internet, so run a tunnel while testing locally, for example:
+
+```bash
+cloudflared tunnel --url http://localhost:9000      # or: ngrok http 9000
+```
+
+In the Razorpay dashboard (Test Mode) go to **Account & Settings > Webhooks > Add New Webhook**: URL `https://<your tunnel address>/hooks/razorpay`, a secret of your choice, and the events `payment.authorized`, `payment.captured`, `payment.failed`, `refund.created` and `refund.processed`. Put the same secret in `.env` as `RAZORPAY_WEBHOOK_SECRET` and restart the backend. Webhooks without a valid signature are ignored, and an event that arrives twice is handled once. A paid order whose customer closed the browser before returning is placed by the webhook.
+
+Amounts: Medusa works in rupees, Razorpay in paise; the backend converts in one place, and the cart total on the server is always what is checked, never an amount from the browser. The reasoning behind the main choices is in `claude/payments-decision.md`.
+
 ## Step 8 – Run the customer website
 
 Open a **new terminal**:
@@ -415,5 +455,6 @@ npm run seed:insurance                     # optional sample insurance partners 
 - Email notifications are built (Step 7e). Still to do: SMS (and WhatsApp), verifying the sending domain in Resend before launch, and emails for Mates events not covered yet (see `claude/notifications-decision.md`).
 - Insurance referrals: the backend and the Admin screen are built (Step 7d). Still to do: the website and mobile app screens (with a consent line on the lead form), and sending leads to partners automatically (today staff export a CSV or contact them by hand).
 - Not built yet: subscriptions. This becomes a custom Medusa module in the same way as the vet, Mates and insurance modules.
-- Razorpay payments, moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
+- Razorpay payments work in test mode (Step 7f). Still to do: live mode (KYC, live keys, a live webhook), and no Cash on Delivery yet.
+- Moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.
