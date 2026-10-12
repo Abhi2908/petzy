@@ -6,7 +6,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import ListingPhoto from "@modules/mates/components/listing-photo"
 import LoginPrompt from "@modules/mates/components/login-prompt"
 import MessageThread from "@modules/mates/components/message-thread"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 import OfferActions from "@modules/mates/components/offer-actions"
 import WithdrawLink from "@modules/mates/components/withdraw-link"
 import StatusPill from "@modules/mates/components/status-pill"

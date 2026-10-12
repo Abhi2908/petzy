@@ -16,7 +16,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Gallery from "@modules/mates/components/gallery"
 import HealthBadges from "@modules/mates/components/health-badges"
 import LoginPrompt from "@modules/mates/components/login-prompt"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 import OfferForm from "@modules/mates/components/offer-form"
 import ReportLink from "@modules/mates/components/report-link"
 

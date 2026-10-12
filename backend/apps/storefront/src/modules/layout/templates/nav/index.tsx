@@ -43,6 +43,13 @@ export default async function Nav() {
               </LocalizedClientLink>
               <LocalizedClientLink
                 className="hover:text-petzy-coral"
+                href="/insurance"
+                data-testid="nav-insurance-link"
+              >
+                Insurance
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                className="hover:text-petzy-coral"
                 href="/vet"
                 data-testid="nav-vet-link"
               >

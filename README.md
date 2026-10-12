@@ -273,7 +273,14 @@ POST /store/insurance/leads          send a lead { plan_id, customer_name, phone
                                      email?, pet_name?, breed?, city?, pincode?, message? } (guests allowed)
 ```
 
-The website and mobile screens for insurance are not built yet; they will call these endpoints. The reasoning behind the main choices is in `claude/insurance-module-decision.md`.
+On the website, **Insurance** is in the menu, at http://localhost:8000/in/insurance:
+
+- **Plans page:** filters for pet type, pet age (years and months) and the highest yearly premium. They live in the URL and fold behind a **Filters** button on a phone.
+- **Plan page:** cover, highlights, exclusions, and a **Get a quote** form.
+- **Consent:** the form cannot be sent until the customer ticks a consent box naming the partner. That wording is a placeholder that needs a lawyer's review, and the Privacy Policy page it links to (`/content/privacy-policy`) does not exist yet.
+- **Errors:** the API's messages (age limit, daily limit) are shown as they are, and the customer's details stay in the form.
+
+The mobile app screens are not built yet. The reasoning behind the main choices is in `claude/insurance-module-decision.md`.
 
 ### Step 7e – Email notifications
 
@@ -310,6 +317,8 @@ What is sent:
 Switch a group off with `NOTIFY_VET=false`, `NOTIFY_MATES=false`, `NOTIFY_INSURANCE=false` or `NOTIFY_ORDERS=false` (all on by default). A failed email never fails the booking, offer or order: it is logged and skipped. Templates are in `backend/apps/backend/src/notifications/templates`. SMS is not built yet; `src/notifications/send.ts` explains where it plugs in. The reasoning behind the main choices is in `claude/notifications-decision.md`.
 
 ### Step 7f – Razorpay payments (test mode)
+
+> **Status: tested against a mock only.** The Razorpay code passes its unit tests and an integration test against a mock of Razorpay's API, but it has **not yet been tried against real Razorpay** (no test keys were available). Treat it as unverified until someone has run a test-mode payment end to end with the steps below. Until the keys are set, checkout keeps the existing manual payment and shows no "Pay online" option (checked in the browser on 2026-10-12).
 
 Checkout offers **Pay online (UPI, cards, netbanking)** through Razorpay. Only test mode is set up for now.
 
@@ -453,8 +462,12 @@ npm run seed:insurance                     # optional sample insurance partners 
 - Vet appointments: the backend, the Admin screen and the website booking page (/in/vet, "Vet" in the menu) are built (Step 7b). Still to do: the booking screen in the mobile app, and email or SMS confirmations.
 - Mates marketplace: the backend and the Admin screen are built (Step 7c). The website screens are built too. Still to do: the mobile app screens, checking breeder registration numbers against the issuing body (today Admin reviews them by eye), and email or SMS alerts for new offers.
 - Email notifications are built (Step 7e). Still to do: SMS (and WhatsApp), verifying the sending domain in Resend before launch, and emails for Mates events not covered yet (see `claude/notifications-decision.md`).
-- Insurance referrals: the backend and the Admin screen are built (Step 7d). Still to do: the website and mobile app screens (with a consent line on the lead form), and sending leads to partners automatically (today staff export a CSV or contact them by hand).
+- Insurance referrals: the backend, the Admin screen and the website screens are built (Step 7d). Still to do:
+  - a lawyer's review of the consent wording, and the Privacy Policy page it links to;
+  - storing the customer's consent with each lead;
+  - the mobile app screens;
+  - sending leads to partners automatically (today staff export a CSV or contact them by hand).
 - Not built yet: subscriptions. This becomes a custom Medusa module in the same way as the vet, Mates and insurance modules.
-- Razorpay payments work in test mode (Step 7f). Still to do: live mode (KYC, live keys, a live webhook), and no Cash on Delivery yet.
+- Razorpay payments (Step 7f): built and tested against a mock only, **not yet against real Razorpay**. Next: a real test-mode run with test keys; after that, live mode (KYC, live keys, a live webhook). No Cash on Delivery yet.
 - Moving photo storage to Cloudflare R2 (a config change, see Step 7c) and hosting (Railway / Render / Vercel) are decided but not wired up.
 - Legal pages, GST and the other pre-launch items live in the project's pre-launch checklist.

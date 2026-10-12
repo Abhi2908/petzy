@@ -5,7 +5,7 @@ import { formatRupees } from "@lib/util/mates-format"
 import Input from "@modules/common/components/input"
 import { Button, Label, Text } from "@modules/common/components/ui"
 import { FormEvent, useState } from "react"
-import Notice from "../notice"
+import Notice from "@modules/common/components/notice"
 
 // The buyer types the phone here on purpose: the seller only ever sees this number, and only after
 // accepting. Nothing is taken from the customer profile.

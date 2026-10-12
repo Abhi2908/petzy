@@ -15,7 +15,7 @@ import ListingPhoto from "@modules/mates/components/listing-photo"
 import LoginPrompt from "@modules/mates/components/login-prompt"
 import MyListingActions from "@modules/mates/components/my-listing-actions"
 import MyMatesNav from "@modules/mates/components/my-mates-nav"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 import StatusPill from "@modules/mates/components/status-pill"
 
 const STATUS_HELP: Record<string, string> = {

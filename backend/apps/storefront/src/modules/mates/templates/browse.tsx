@@ -4,7 +4,7 @@ import { Button, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import BrowseFilters from "@modules/mates/components/browse-filters"
 import ListingCard from "@modules/mates/components/listing-card"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 import { Pagination } from "@modules/store/components/pagination"
 
 const FILTERS = [

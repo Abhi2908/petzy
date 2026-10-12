@@ -7,7 +7,7 @@ import {
 } from "@lib/data/mates"
 import LoginPrompt from "@modules/mates/components/login-prompt"
 import MyMatesNav from "@modules/mates/components/my-mates-nav"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 import OfferRow from "@modules/mates/components/offer-row"
 
 // Offers needing an answer first, then live ones, then the rest, newest first within each group.

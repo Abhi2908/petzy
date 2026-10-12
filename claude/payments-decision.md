@@ -2,6 +2,8 @@
 
 Date: 2026-10-12. Covers the first version of Razorpay payments, test mode only. Cash on Delivery, subscriptions and live mode are out of scope.
 
+> **Status: tested against a mock only, not yet against real Razorpay.** Everything below passes unit tests and an integration test against a mock of Razorpay's API (see Tests). No real test-mode payment has been made yet, because no Razorpay test keys were available, so the browser checks in the brief (a successful payment, a failed payment, closing the popup, and the order in Admin) have not been done. The code went to `main` at the owner's request on 2026-10-12, and was left there on purpose. Without keys it stays switched off. Checked in the browser the same day: with no keys the India region offers only the existing manual payment, there is no "Pay online" option, and a full checkout with the manual payment places the order. Before relying on Razorpay, add test keys, run `npm run setup:razorpay`, and do the README's test-mode steps end to end.
+
 ## Shape
 
 - **Provider module:** `backend/apps/backend/src/modules/razorpay` is a Medusa v2 payment provider (`AbstractPaymentProvider`). It is registered in `medusa-config.ts` with identifier `razorpay` and id `razorpay`, so its provider id is `pp_razorpay_razorpay`. It talks to Razorpay's REST API with `fetch` and HTTP basic auth (`lib/client.ts`), with no SDK and no new package.

@@ -64,9 +64,42 @@ Petzy does not sell or underwrite insurance. It lists partner insurers' plans an
   - Admin plan checks, cascade deletes with counts, and lead status, notes and delete;
   - the CSV export, including formula escaping and filters.
 
+## Website (added 2026-10-12)
+
+- Pages live under `/[countryCode]/insurance` (the list) and `/[countryCode]/insurance/:id` (one plan), in `backend/apps/storefront/src/modules/insurance`. Data calls are server actions in `lib/data/insurance.ts` that return `{ data }` or `{ error }`, so the API's own messages reach the page in production.
+- **Disclaimer.** "Insurance is offered by our partners. Petzy does not sell or underwrite insurance." is the first thing on both pages, in a highlighted box.
+- **Filters** use the API's names in the URL (`pet_type`, `pet_age_months`, `max_premium`), so a filtered list can be shared and is rendered on the server. Age is typed as years plus months and sent as months. On a phone the filters fold behind a "Filters" button. With no results, the page shows "No plans match, try different filters" and a link to clear them.
+- **Plan cards** show the partner's logo (or its initials when there is none), the partner's and plan's names, "from Rs X a year", the cover amount, the first three highlights, and the pets and ages covered. Logos are a plain `<img>`, because Admin can enter a logo link on any https host, which `next/image` would need allowed one host at a time.
+- **Carrying the filter over.** Opening a plan from a filtered list carries the pet type and age into the quote form, so the customer does not type them twice.
+
+### The quote form
+
+- **Pet type** offers only the types the plan covers.
+- **Required:** name, phone, pet name, pet type, pet age and city. **Optional:** email, breed, PIN code and message. The API itself requires less (pet name and city are optional there); the form asks for both because a partner needs them to quote.
+- **Consent:** a required checkbox: "I agree that Petzy may share these details with {partner} so they can contact me about this plan. See our Privacy Policy." The browser refuses to submit without it, and the submit handler checks again. A code comment marks the wording as a placeholder needing a lawyer's review (DPDP Act) before launch.
+- **The Privacy Policy link** points at `/content/privacy-policy`, the same address the account sign-up form already uses. **That page does not exist yet**, so the link is a 404 until it is written. It opens in a new tab, so the form is not lost.
+- **The form is uncontrolled.** After an error everything the customer typed stays, including the ticked box. Errors show the API's message as it comes, for example "Complete Care (sample) covers pets aged 3 months to 8 years. Your pet is 9 years." or "You have already sent 3 requests in the last 24 hours from this phone number. Please try again tomorrow."
+- **The confirmation** names the partner and the plan and says the partner will contact them. It makes no promise about timing.
+- **Shared component.** The `Notice` component used for error, empty and success boxes moved from the Mates module to `modules/common/components/notice`, now that two modules use it.
+
+### Checked in a browser (phone size)
+
+- the filters, including an empty result;
+- opening a plan with the age carried over;
+- submitting without consent (blocked, nothing sent);
+- a valid quote;
+- an age the plan does not cover;
+- a 4th lead from the same phone (refused);
+- the three test leads in Admin > Insurance > Leads, deleted afterwards;
+- the desktop nav link and the mobile menu.
+
+No layout overflowed sideways and no page errors appeared.
+
 ## Not done
 
-- Website and mobile screens. The lead form should carry a consent line ("We will share your details with <partner> so they can contact you"), because leads are personal data passed to a third party. Check the wording against India's DPDP Act before launch.
+- **Consent is not stored with the lead.** The checkbox only gates the form; the lead record has no consent field. For DPDP it is likely we must be able to show when and to what wording each customer agreed. Adding `consent_text` and `consent_at` to `insurance_lead` is a small change (a new migration) and is worth doing before launch.
+- The Privacy Policy page itself, and a lawyer's review of the consent wording.
+- Mobile app screens.
 - Sending leads to partners automatically (email or a partner API). Today staff export a CSV or contact the partner by hand and mark the lead "Sent to partner".
 - Retention: leads are kept until someone deletes them. Decide how long to keep closed leads.
 - An IP-based limit or captcha, if the per-phone limit turns out not to be enough.

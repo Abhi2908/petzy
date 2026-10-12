@@ -5,7 +5,7 @@ import { listMyMatesListings } from "@lib/data/mates"
 import { Text } from "@modules/common/components/ui"
 import ListingForm from "@modules/mates/components/listing-form"
 import LoginPrompt from "@modules/mates/components/login-prompt"
-import Notice from "@modules/mates/components/notice"
+import Notice from "@modules/common/components/notice"
 
 export const metadata: Metadata = { title: "Edit listing" }
 

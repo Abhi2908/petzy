@@ -11,7 +11,7 @@ import { GENDERS, PET_TYPES } from "@lib/util/mates-format"
 import Input from "@modules/common/components/input"
 import { Button, clx, Label, Text } from "@modules/common/components/ui"
 import { FormEvent, ReactNode, useState } from "react"
-import Notice from "../notice"
+import Notice from "@modules/common/components/notice"
 import PhotoUploader, { Photo } from "../photo-uploader"
 
 const STATES = [
